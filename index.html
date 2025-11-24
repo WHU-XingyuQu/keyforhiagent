@@ -85,10 +85,10 @@
     </div>
 
     <div id="out" class="out" style="display:none;"></div>
-    <div class="hint">规则：账号=姓氏拼音小写+学号；初始密码=姓氏首字母大写+小写+学号后8位+!</div>
+    <div class="hint">规则：账号=姓氏拼音首字母+学号；初始密码=大写首字母+小写首字母+学号后8位+!</div>
   </div>
 
-  <!-- 拼音库：浏览器端把中文转拼音 -->
+  <!-- 拼音库 -->
   <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.20.4/dist/index.js"></script>
 
   <script>
@@ -97,25 +97,17 @@
     function getSurname(name) {
       name = (name || "").trim();
       if (!name) return "";
-      // 复姓简单处理：优先识别常见复姓
-      const doubleSurnames = ["欧阳","司马","诸葛","上官","夏侯","东方","皇甫","尉迟","公羊","赫连","澹台","宗政","濮阳","公冶","太史","申屠","公孙","慕容","仲孙","钟离","长孙","宇文","司徒","鲜于","闾丘","子车","亓官","司空","巫马","公西","颛孙","壤驷","公良","漆雕","乐正","宰父","谷梁","拓跋","夹谷","轩辕","令狐","段干","百里","呼延","东郭","南宫","羊舌","微生","梁丘","左丘","东门","西门"];
-      for (const ds of doubleSurnames) {
+      const dsList = ["欧阳","司马","诸葛","上官","夏侯","东方","皇甫","尉迟","公羊","赫连","澹台","宗政","濮阳","公冶","太史","申屠","公孙","慕容","仲孙","钟离","长孙","宇文","司徒","鲜于","闾丘","子车","亓官","司空","巫马","公西","颛孙","壤驷","公良","漆雕","乐正","宰父","谷梁","拓跋","夹谷","轩辕","令狐","段干","百里","呼延","东郭","南宫","羊舌","微生","梁丘","左丘","东门","西门"];
+      for (const ds of dsList) {
         if (name.startsWith(ds)) return ds;
       }
       return name[0];
     }
 
-    function toPinyinLower(surnameCn) {
-      // 取拼音，不要声调；复姓会变成 "ouyang" 这样的
-      const py = window.pinyinPro.pinyin(surnameCn, { toneType: "none", type: "array" }).join("");
-      return (py || "").toLowerCase();
-    }
-
-    function capFirstLetter(pyLower) {
-      if (!pyLower) return { upper: "", lower: "" };
-      const lower = pyLower[0];
-      const upper = lower.toUpperCase();
-      return { upper, lower };
+    function surnameInitialLower(surnameCn) {
+      const py = window.pinyinPro.pinyin(surnameCn, { toneType: "none", type: "array" });
+      if (!py || !py.length) return "";
+      return py[0][0].toLowerCase();  // ★ 只取首字母
     }
 
     function gen() {
@@ -123,24 +115,22 @@
       const sid = $("sid").value.trim();
 
       if (!name) return alert("请先输入姓名");
-      if (!sid || sid.length < 8 || !/^\d+$/.test(sid)) {
+      if (!sid || sid.length < 8 || !/^\d+$/.test(sid))
         return alert("学号需为纯数字且至少 8 位");
-      }
 
       const surnameCn = getSurname(name);
-      const surnamePyLower = toPinyinLower(surnameCn);
-      if (!surnamePyLower) return alert("姓氏拼音转换失败，请检查姓名");
+      const sInitialLower = surnameInitialLower(surnameCn);
+      if (!sInitialLower) return alert("姓氏拼音转换失败");
 
-      const account = surnamePyLower + sid;
+      const account = sInitialLower + sid;
 
       const last8 = sid.slice(-8);
-      const { upper, lower } = capFirstLetter(surnamePyLower);
-      const password = `${upper}${lower}${last8}!`;
+      const password = `${sInitialLower.toUpperCase()}${sInitialLower}${last8}!`;
 
       $("out").style.display = "block";
       $("out").innerHTML = `
         <div class="kv"><span>姓名</span><b>${name}</b></div>
-        <div class="kv"><span>姓氏</span><b>${surnameCn} / ${surnamePyLower}</b></div>
+        <div class="kv"><span>姓氏</span><b>${surnameCn}（拼音首字母：${sInitialLower}）</b></div>
         <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08); margin:10px 0;">
         <div class="kv"><span>生成账号</span><b>${account}</b></div>
         <div class="kv"><span>初始密码</span><b>${password}</b></div>
@@ -153,8 +143,8 @@
       if (!r) return alert("还没有生成结果");
       const txt = `姓名: ${r.name}\n学号: ${r.sid}\n账号: ${r.account}\n初始密码: ${r.password}\n`;
       navigator.clipboard.writeText(txt).then(
-        () => alert("已复制到剪贴板"),
-        () => alert("复制失败，请手动复制")
+        () => alert("已复制"),
+        () => alert("复制失败")
       );
     }
 
